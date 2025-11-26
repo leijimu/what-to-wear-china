@@ -78,39 +78,45 @@ function selectCity(cityCode) {
  * @returns {object} - 包含建议和描述的对象
  */
 function getSuggestionByTemp(temp) {
+    // ⚠️ 确保每个温度区间只提供 4 个核心穿搭项
     if (temp >= 26) {
         return {
             title: "盛夏清凉装",
-            items: ["T恤", "短裤/短裙", "凉鞋", "防晒霜"],
-            tip: "炎热天气，注意补充水分和防晒，选择透气棉麻衣物。",
+            // 26°C 及以上
+            items: ["T恤/背心", "短裤/短裙", "凉鞋/拖鞋", "防晒霜"], // 4项
+            tip: "炎热天气，注意补充水分和防晒，选择透气棉麻衣物，避免中暑。",
             tempRange: "26°C 及以上"
         };
     } else if (20 <= temp < 26) {
         return {
             title: "舒适春秋装",
-            items: ["长袖衬衫", "薄外套/针织衫", "牛仔裤", "休闲鞋"],
-            tip: "早晚温差较大，建议携带一件薄外套，以防降温。",
+            // 20°C ~ 25°C
+            items: ["长袖衬衫", "薄外套/针织衫", "休闲长裤", "休闲鞋"], // 4项
+            tip: "早晚温差较大，建议携带一件薄外套，以防降温。穿搭以舒适透气为主。",
             tempRange: "20°C ~ 25°C"
         };
     } else if (15 <= temp < 20) {
         return {
             title: "初秋保暖装",
-            items: ["夹克/风衣", "卫衣", "毛衣", "运动鞋"],
-            tip: "体感微凉，需要适当保暖，尤其注意腹部和关节。",
+            // 15°C ~ 19°C
+            items: ["卫衣/针织衫", "夹克/风衣", "牛仔裤", "运动鞋/短靴"], // 4项
+            tip: "体感微凉，需要适当保暖，尤其注意腹部和关节。多层穿搭便于调节。",
             tempRange: "15°C ~ 19°C"
         };
     } else if (5 <= temp < 15) {
         return {
             title: "深秋冬过渡装",
-            items: ["厚外套", "羊毛衫", "保暖内衣", "皮靴/雪地靴"],
-            tip: "体感寒冷，多穿几层衣物保持温度，防寒是重点。",
+            // 5°C ~ 14°C
+            items: ["厚外套/大衣", "羊毛衫", "保暖内衣", "皮靴/雪地靴"], // 4项
+            tip: "体感寒冷，多穿几层衣物保持温度，防寒是重点。内搭选择羊毛等保暖材质。",
             tempRange: "5°C ~ 14°C"
         };
     } else { // temp < 5
         return {
             title: "寒冬全副武装",
-            items: ["羽绒服/大衣", "围巾/帽子", "手套", "加绒裤"],
-            tip: "极寒天气，务必做好头部和四肢的保暖，避免长时间户外活动。",
+            // 5°C 以下
+            items: ["羽绒服/大衣", "围巾/帽子", "手套", "加绒裤"], // 4项
+            tip: "极寒天气，务必做好头部和四肢的保暖，避免长时间户外活动，注意防滑。",
             tempRange: "5°C 以下"
         };
     }
@@ -149,7 +155,7 @@ async function getAdcodeByCityName(cityName) {
 
 
 /**
- * 核心查询函数：修改为先查 Adcode，再查天气
+ * 核心查询函数：先查 Adcode，再查天气
  */
 async function fetchOutfitSuggestion() {
     const cityName = document.getElementById('city-input').value.trim();
@@ -162,7 +168,7 @@ async function fetchOutfitSuggestion() {
     resultsSection.innerHTML = '<h2>正在查询城市编码...</h2>';
     resultsSection.style.display = 'block';
 
-    // 1. (NEW) 根据城市名动态获取 Adcode
+    // 1. 根据城市名动态获取 Adcode
     const cityAdcode = await getAdcodeByCityName(cityName);
     
     if (!cityAdcode) {
@@ -175,13 +181,14 @@ async function fetchOutfitSuggestion() {
 
     try {
         // 2. 构造天气 API URL (使用动态获取的 Adcode)
+        // extensions=base 只返回实况天气
         const url = `${BASE_WEATHER_URL}?city=${cityAdcode}&key=${API_KEY}&extensions=base`;
         
         // 3. 发起 API 请求
         const response = await fetch(url);
         const data = await response.json();
 
-        // 4. 检查 API 响应是否成功 (状态码 10000 表示成功)
+        // 4. 检查 API 响应是否成功 (状态码 1 表示成功)
         if (data.status !== '1' || !data.lives || data.lives.length === 0) {
             alert(`查询失败，高德API返回错误信息: ${data.info || '未知错误'}`);
             resultsSection.style.display = 'none';
@@ -254,6 +261,7 @@ function renderResults(cityName, weatherData, suggestion) {
     resultsSection.insertAdjacentHTML('beforeend', weatherCardHTML);
 
     // 2. 渲染推荐穿搭
+    // 注意：这里渲染是动态的，取决于 suggestion.items 数组的长度，现在它被限制为 4 个
     const outfitItemsHTML = suggestion.items.map(item => `
         <div class="outfit-item">
             <div class="placeholder"></div>
