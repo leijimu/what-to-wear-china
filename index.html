@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>穿什么衣服? - 全国版</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body onload="initApp()">
+
+    <header class="container">
+        <div class="header-content">
+            <div class="header-title">
+                <span class="main-title">穿什么衣服?</span>
+                <span class="sub-title">全国版</span>
+            </div>
+            <div class="header-date">
+                📅 2025年11月
+            </div>
+        </div>
+        
+        <div class="search-bar-container">
+            <input type="text" id="city-input" placeholder="输入城市(如: 武汉, 杭州, 拉萨...)">
+            <button class="search-btn" onclick="fetchOutfitSuggestion()">查询</button>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hot-destinations">
+            <h2>热门目的地</h2>
+            <div class="city-grid">
+                <button class="city-card" onclick="selectCity('beijing')">
+                    <span class="icon">⛰️</span>
+                    <span class="name">北京</span>
+                </button>
+                <button class="city-card" onclick="selectCity('shanghai')">
+                    <span class="icon">🏢</span>
+                    <span class="name">上海</span>
+                </button>
+                <button class="city-card" onclick="selectCity('guangzhou')">
+                    <span class="icon">🌴</span>
+                    <span class="name">广州</span>
+                </button>
+                <button class="city-card" onclick="selectCity('chengdu')">
+                    <span class="icon">🐼</span>
+                    <span class="name">成都</span>
+                </button>
+                <button class="city-card" onclick="selectCity('urumqi')">
+                    <span class="icon">🕌</span>
+                    <span class="name">乌鲁木齐</span>
+                </button>
+                <button class="city-card" onclick="selectCity('sanya')">
+                    <span class="icon">🏖️</span>
+                    <span class="name">三亚</span>
+                </button>
+                <button class="city-card" onclick="selectCity('qingdao')">
+                    <span class="icon">🍺</span>
+                    <span class="name">青岛</span>
+                </button>
+                <button class="city-card" onclick="selectCity('xian')">
+                    <span class="icon">🏺</span>
+                    <span class="name">西安</span>
+                </button>
+                <button class="city-card" onclick="selectCity('hangzhou')">
+                    <span class="icon">🏞️</span>
+                    <span class="name">杭州</span>
+                </button>
+                <button class="city-card" onclick="selectCity('chongqing')">
+                    <span class="icon">🍲</span>
+                    <span class="name">重庆</span>
+                </button>
+                <button class="city-card" onclick="selectCity('kunming')">
+                    <span class="icon">🌸</span>
+                    <span class="name">昆明</span>
+                </button>
+                <button class="city-card" onclick="selectCity('lhasa')">
+                    <span class="icon">🏔️</span>
+                    <span class="name">拉萨</span>
+                </button>
+            </div>
+        </section>
+
+        <div id="results-section">
+            </div>
+        
+        <div class="back-to-top" onclick="document.getElementById('city-input').focus();">
+            返回热门城市/重新查询
+        </div>
+
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
