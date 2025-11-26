@@ -1,11 +1,42 @@
 /**
  * ===========================================
- * API 配置 (请务必替换 KEY)
+ * API 配置 (高德地图 AMap)
  * ===========================================
  */
-// ⚠️ 替换为您自己的 OpenWeatherMap API 密钥
-const API_KEY = '899cddfdf5ee42bb1e51a2f4c8120d80'; 
-const BASE_URL = 'https://api.openweathermap.org/data/2.5/weather';
+// ⚠️ 替换为您在高德开放平台申请的 Web 服务 Key
+const API_KEY = 'ffa3d2b9aad5c5142d966909485423c5'; 
+// 高德天气查询接口
+const BASE_URL = 'https://restapi.amap.com/v3/weather/weatherInfo'; 
+
+// 城市名称到 Adcode 的映射表（高德主要通过 Adcode 查询天气）
+const CITY_ADCODES = {
+    '北京': '110000',
+    '上海': '310000',
+    '广州': '440100',
+    '深圳': '440300',
+    '成都': '510100',
+    '乌鲁木齐': '650100',
+    '三亚': '460200',
+    '青岛': '370200',
+    '西安': '610100',
+    '杭州': '330100',
+    '重庆': '500000',
+    '昆明': '530100',
+    '拉萨': '540100',
+    // 热门目的地城市编码：
+    'beijing': '110000',
+    'shanghai': '310000',
+    'guangzhou': '440100',
+    'chengdu': '510100',
+    'urumqi': '650100',
+    'sanya': '460200',
+    'qingdao': '370200',
+    'xian': '610100',
+    'hangzhou': '330100',
+    'chongqing': '500000',
+    'kunming': '530100',
+    'lhasa': '540100',
+};
 
 
 /**
@@ -36,7 +67,7 @@ function initApp() {
 
 /**
  * 城市选择逻辑：将热门城市的名称放入输入框并触发查询
- * @param {string} cityCode - 城市的代码 (这里是英文名)
+ * @param {string} cityCode - 城市的英文代码
  */
 function selectCity(cityCode) {
     const cityMap = {
@@ -114,28 +145,13 @@ function getSuggestionByTemp(temp) {
 
 
 /**
- * 辅助函数：将米/秒的风速转换为中文描述
- * @param {number} speed - 风速 (m/s)
- * @returns {string} - 中文描述
- */
-function getWindSpeedDescription(speed) {
-    if (speed < 1.6) return '无风';
-    if (speed < 3.4) return '微风';
-    if (speed < 5.5) return '和风';
-    if (speed < 8.0) return '清风';
-    if (speed < 10.8) return '强风';
-    return '大风';
-}
-
-
-/**
  * ===========================================
- * 替换的函数：真实获取天气数据
+ * 核心函数：获取高德天气数据
  * ===========================================
  */
 
 /**
- * 核心查询函数：根据城市获取真实天气数据并渲染建议
+ * 核心查询函数：根据城市获取高德天气数据并渲染建议
  */
 async function fetchOutfitSuggestion() {
     const cityName = document.getElementById('city-input').value.trim();
@@ -144,40 +160,54 @@ async function fetchOutfitSuggestion() {
         return;
     }
 
+    // 1. 根据城市名获取 Adcode
+    const cityAdcode = CITY_ADCODES[cityName];
+    if (!cityAdcode) {
+        alert(`抱歉，城市【${cityName}】的编码（Adcode）未在列表中找到。请尝试输入列表中的城市。`);
+        return;
+    }
+
     // 显示加载提示
     const resultsSection = document.getElementById('results-section');
-    resultsSection.innerHTML = '<h2>正在查询天气...</h2>';
+    resultsSection.innerHTML = '<h2>正在查询高德天气...</h2>';
     resultsSection.style.display = 'block';
 
     try {
-        // 1. 构造 API URL (使用中文城市名进行查询)
-        const url = `${BASE_URL}?q=${cityName}&appid=${API_KEY}&units=metric&lang=zh_cn`;
+        // 2. 构造 API URL: extensions=base 获取实况天气
+        // 高德实况 API 只需要 city Adcode 和 key
+        const url = `${BASE_URL}?city=${cityAdcode}&key=${API_KEY}&extensions=base`;
         
-        // 2. 发起 API 请求
+        // 3. 发起 API 请求
         const response = await fetch(url);
         const data = await response.json();
 
-        // 3. 检查 API 响应是否成功 (状态码 200)
-        if (data.cod !== 200) {
-            alert(`查询失败，城市: ${cityName} 未找到或API错误: ${data.message}`);
+        // 4. 检查 API 响应是否成功 (状态码 10000 表示成功)
+        if (data.status !== '1' || !data.lives || data.lives.length === 0) {
+            // 错误检查，例如 API KEY 错误或城市不存在
+            alert(`查询失败，高德API返回错误信息: ${data.info || '未知错误'}`);
             resultsSection.style.display = 'none';
             return;
         }
 
-        // 4. 解析所需的天气数据
+        // 5. 解析所需的天气数据 (高德返回的数据结构)
+        const liveData = data.lives[0];
+        
+        const currentTemp = parseInt(liveData.temperature);
+        
         const weatherData = {
-            min: Math.round(data.main.temp_min),
-            max: Math.round(data.main.temp_max),
-            current: Math.round(data.main.temp), // 实时温度
-            weather: data.weather[0].description, // 天气描述 (如: 晴朗)
-            wind: getWindSpeedDescription(data.wind.speed) // 风速处理
+            // 注意：高德实况只返回当前温度，这里使用当前温度进行 min/max 简单估算
+            min: currentTemp - 2, 
+            max: currentTemp + 2,
+            current: currentTemp, // 实时温度
+            weather: liveData.weather, // 天气现象描述 (如: 晴)
+            wind: liveData.winddirection + liveData.windpower + '级' // 风向 + 风力
         };
         
-        // 5. 根据实时温度获取服装建议
+        // 6. 根据实时温度获取服装建议
         const suggestion = getSuggestionByTemp(weatherData.current);
 
-        // 6. 渲染结果
-        renderResults(data.name || cityName, weatherData, suggestion);
+        // 7. 渲染结果
+        renderResults(liveData.city || cityName, weatherData, suggestion);
 
     } catch (error) {
         console.error("Fetch Error:", error);
@@ -263,8 +293,8 @@ function renderResults(cityName, weatherData, suggestion) {
                 </div>
                 <div class="special-tip">
                     <span class="emoji">☀️</span>
-                    <h4>紫外线</h4>
-                    <p>光照${weatherData.weather.includes('晴') ? '较强' : '一般'}，注意皮肤护理。</p>
+                    <h4>光照/紫外线</h4>
+                    <p>光照${weatherData.weather.includes('晴') ? '较强' : '一般'}，注意皮肤护理和防晒。</p>
                 </div>
             </div>
         </section>
@@ -287,3 +317,6 @@ function renderResults(cityName, weatherData, suggestion) {
     // 平滑滚动到结果区域，确保用户看到结果
     document.getElementById('weather-card').scrollIntoView({ behavior: 'smooth' });
 }
+
+// 页面加载完成后调用初始化函数
+document.addEventListener('DOMContentLoaded', initApp);
