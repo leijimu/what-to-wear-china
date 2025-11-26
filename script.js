@@ -5,38 +5,11 @@
  */
 // ⚠️ 替换为您在高德开放平台申请的 Web 服务 Key
 const API_KEY = 'ffa3d2b9aad5c5142d966909485423c5'; 
-// 高德天气查询接口
-const BASE_URL = 'https://restapi.amap.com/v3/weather/weatherInfo'; 
 
-// 城市名称到 Adcode 的映射表（高德主要通过 Adcode 查询天气）
-const CITY_ADCODES = {
-    '北京': '110000',
-    '上海': '310000',
-    '广州': '440100',
-    '深圳': '440300',
-    '成都': '510100',
-    '乌鲁木齐': '650100',
-    '三亚': '460200',
-    '青岛': '370200',
-    '西安': '610100',
-    '杭州': '330100',
-    '重庆': '500000',
-    '昆明': '530100',
-    '拉萨': '540100',
-    // 热门目的地城市编码：
-    'beijing': '110000',
-    'shanghai': '310000',
-    'guangzhou': '440100',
-    'chengdu': '510100',
-    'urumqi': '650100',
-    'sanya': '460200',
-    'qingdao': '370200',
-    'xian': '610100',
-    'hangzhou': '330100',
-    'chongqing': '500000',
-    'kunming': '530100',
-    'lhasa': '540100',
-};
+// 高德天气查询接口
+const BASE_WEATHER_URL = 'https://restapi.amap.com/v3/weather/weatherInfo'; 
+// 高德行政区划查询接口 (用于根据城市名查找 Adcode)
+const BASE_DISTRICT_URL = 'https://restapi.amap.com/v3/config/district'; 
 
 
 /**
@@ -146,12 +119,37 @@ function getSuggestionByTemp(temp) {
 
 /**
  * ===========================================
- * 核心函数：获取高德天气数据
+ * 核心函数：获取高德 Adcode 和天气数据
  * ===========================================
  */
 
 /**
- * 核心查询函数：根据城市获取高德天气数据并渲染建议
+ * 辅助函数：通过城市名称查询高德 Adcode (全国查询的关键)
+ * @param {string} cityName - 用户输入的城市名称（例如：'武汉', '拉萨'）
+ * @returns {string|null} - 城市 Adcode 或 null
+ */
+async function getAdcodeByCityName(cityName) {
+    // 高德行政区划 API: subdistrict=0 只返回当前级别，extensions=base 简化数据
+    const url = `${BASE_DISTRICT_URL}?keywords=${cityName}&key=${API_KEY}&subdistrict=0&extensions=base`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.status === '1' && data.districts.length > 0) {
+            // 返回第一个匹配到的行政区划的 Adcode
+            return data.districts[0].adcode; 
+        }
+        return null;
+    } catch (error) {
+        console.error("Adcode Fetch Error:", error);
+        return null;
+    }
+}
+
+
+/**
+ * 核心查询函数：修改为先查 Adcode，再查天气
  */
 async function fetchOutfitSuggestion() {
     const cityName = document.getElementById('city-input').value.trim();
@@ -160,22 +158,24 @@ async function fetchOutfitSuggestion() {
         return;
     }
 
-    // 1. 根据城市名获取 Adcode
-    const cityAdcode = CITY_ADCODES[cityName];
+    const resultsSection = document.getElementById('results-section');
+    resultsSection.innerHTML = '<h2>正在查询城市编码...</h2>';
+    resultsSection.style.display = 'block';
+
+    // 1. (NEW) 根据城市名动态获取 Adcode
+    const cityAdcode = await getAdcodeByCityName(cityName);
+    
     if (!cityAdcode) {
-        alert(`抱歉，城市【${cityName}】的编码（Adcode）未在列表中找到。请尝试输入列表中的城市。`);
+        alert(`抱歉，城市【${cityName}】的地理编码（Adcode）未找到，请检查城市名称是否输入正确（如：上海市、武汉市）。`);
+        resultsSection.style.display = 'none';
         return;
     }
 
-    // 显示加载提示
-    const resultsSection = document.getElementById('results-section');
-    resultsSection.innerHTML = '<h2>正在查询高德天气...</h2>';
-    resultsSection.style.display = 'block';
+    resultsSection.innerHTML = '<h2>已获取编码，正在查询天气...</h2>';
 
     try {
-        // 2. 构造 API URL: extensions=base 获取实况天气
-        // 高德实况 API 只需要 city Adcode 和 key
-        const url = `${BASE_URL}?city=${cityAdcode}&key=${API_KEY}&extensions=base`;
+        // 2. 构造天气 API URL (使用动态获取的 Adcode)
+        const url = `${BASE_WEATHER_URL}?city=${cityAdcode}&key=${API_KEY}&extensions=base`;
         
         // 3. 发起 API 请求
         const response = await fetch(url);
@@ -183,7 +183,6 @@ async function fetchOutfitSuggestion() {
 
         // 4. 检查 API 响应是否成功 (状态码 10000 表示成功)
         if (data.status !== '1' || !data.lives || data.lives.length === 0) {
-            // 错误检查，例如 API KEY 错误或城市不存在
             alert(`查询失败，高德API返回错误信息: ${data.info || '未知错误'}`);
             resultsSection.style.display = 'none';
             return;
@@ -195,7 +194,7 @@ async function fetchOutfitSuggestion() {
         const currentTemp = parseInt(liveData.temperature);
         
         const weatherData = {
-            // 注意：高德实况只返回当前温度，这里使用当前温度进行 min/max 简单估算
+            // 高德实况只返回当前温度，这里使用当前温度进行 min/max 简单估算
             min: currentTemp - 2, 
             max: currentTemp + 2,
             current: currentTemp, // 实时温度
@@ -320,3 +319,24 @@ function renderResults(cityName, weatherData, suggestion) {
 
 // 页面加载完成后调用初始化函数
 document.addEventListener('DOMContentLoaded', initApp);
+
+/**
+ * ===========================================
+ * ⬇️ 用户体验优化：键盘回车查询 ⬇️
+ * ===========================================
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    const cityInput = document.getElementById('city-input');
+    
+    // 监听键盘按键抬起事件
+    cityInput.addEventListener('keyup', (event) => {
+        // 检查按下的键是否是 'Enter' (回车键)
+        if (event.key === 'Enter') {
+            // 阻止默认行为
+            event.preventDefault(); 
+            
+            // 调用查询函数
+            fetchOutfitSuggestion();
+        }
+    });
+});
