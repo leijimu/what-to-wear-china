@@ -4,7 +4,7 @@
  * ===========================================
  */
 // ⚠️ 替换为您在高德开放平台申请的 Web 服务 Key
-const API_KEY = 'ffa3d2b9aad5c5142d966909485423c5'; 
+const API_KEY = 'API示意'; 
 
 // 高德天气查询接口
 const BASE_WEATHER_URL = 'https://restapi.amap.com/v3/weather/weatherInfo'; 
@@ -348,3 +348,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
